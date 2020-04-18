@@ -1,2 +1,2 @@
 # sound-sensor
-Geluidssensor voor TTN Apeldoorn
+Geluid sensor voor TTN Apeldoorn
