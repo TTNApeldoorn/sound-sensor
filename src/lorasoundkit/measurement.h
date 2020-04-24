@@ -50,19 +50,34 @@
 #define OCTAVES 9
 
 // A-weighting and C-weighting curve from 31.5 Hz ... 8kHz in steps of whole octaves
-// spectrum           31.5Hz 63Hz  125Hz 250Hz  500Hz 1kHz 2kHz 4kHz  8kHz
-#define A_WEIGHTING { -39.4, -26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1 };
-#define C_WEIGHTING {  -3.0,  -0.8,  -0.2,  0.0,  0.0, 0.0, 0.2, 0.3, -3.0 };
-#define Z_WEIGHTING {   0.0,  -0.0,  -0.0,  0.0,  0.0, 0.0, 0.0, 0.0,  0.0 };
+// spectrum (Hz)     31.5Hz|  63Hz| 125Hz| 250Hz| 500Hz|1kHz|2kHz|4kHz| 8kHz
+#define A_WEIGHTING { -39.4, -26.2, -16.1,  -8.6,  -3.2, 0.0, 1.2, 1.0, -1.1 };
+#define C_WEIGHTING {  -3.0,  -0.8,  -0.2,   0.0,   0.0, 0.0, 0.2, 0.3, -3.0 };
+#define Z_WEIGHTING {   0.0,  -0.0,  -0.0,   0.0,   0.0, 0.0, 0.0, 0.0,  0.0 };
 
 
 class Measurement {
   public:
+    /// \brief constructor
+    /// \param [in] weighting Weighting factor for class
     Measurement( float* weighting);
+    
+    /// \brief Reset
     void reset();
-    void update( float* energies);     
+    
+    /// \brief Update energies?
+    /// \param [in] energies ?
+    void update( float* energies);
+    
+    /// \param Calculate what?
     void calculate();
+    
+    /// \brief calculate dB value for power
+    /// \param [in] v Value in power to be converted in to dB.
+    /// \return [out] value v in dB.
     float decibel(float v);
+    
+    /// \brief Print debug information.
     void print();
 
    // public members
@@ -75,8 +90,8 @@ class Measurement {
     float avg;                ///< Average value in dB for all bands.
 
   private:
-    float* _weighting;
-    int _count;
+    float* _weighting;        ///< Weighting factor ?
+    int    _count;            ///< Internal counter ?
 }; 
 
 #endif //__MEASUREMENT_H_
