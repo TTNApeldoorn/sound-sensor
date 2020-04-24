@@ -28,16 +28,13 @@
 //Measurement::Measurement( float* weighting) {
 //  _weighting = weighting;
 //  for(int i=0; i<OCTAVES; i++){
-//    _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to level constatnts
+//    _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to level constants
 //  }
 //  reset();
 //}
 
-/// Changed initialisation of member variable _weighting and _count to initializer list.
-/// \todo Verify operation.
 Measurement::Measurement( float* weighting):
-  _weighting(weighting),
-  _count(0)
+  _weighting(weighting)
 {
   for(int i=0; i<OCTAVES; i++){
     _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to level constants
@@ -54,7 +51,7 @@ void Measurement::reset(){
   }
 }
 
-void Measurement::update( float* energies ){
+void Measurement::update( float* energies ) {
   float sum = 0.0;
   for (int i = 0; i < OCTAVES; i++){
     float v = energies[i] * _weighting[i];
@@ -76,11 +73,11 @@ void Measurement::calculate(){
   }
 }
 
-float Measurement::decibel(float v){
+float Measurement::decibel(float v) {
   return 10.0 * log10(v); // log(10);     // for energy this should be 20.0 * log...  to be checked! 
 }
 
-void Measurement::print(){
+void Measurement::print() {
   printf("count=%d peak=%.1f avg=%.1f =>", _count, peak, avg);
   for (int i = 0; i < OCTAVES; i++){
     printf(" %.1f", spectrum[i]);

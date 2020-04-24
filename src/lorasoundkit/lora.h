@@ -15,7 +15,7 @@
 /*!
  * \file lora.h
  * \brief LoRa LMIC wrapper class for TTN-Apeldoorn Sound Sensor.
- * .
+ * 
  * \author Marcel Meek
  * \date See revision table
  * \version see revision table
