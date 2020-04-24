@@ -13,7 +13,7 @@
   --------------------------------------------------------------------*/
 
 /*!
- * \file lorasound.ino
+ * \file lorasoundkit.ino
  * \brief ESP32 I2S Noise FFT with LoRa.
  * This example calculates noise in octave bands, in a-,c- and z-weighting.
  * \author Marcel Meek
@@ -24,13 +24,8 @@
  * 
  * version | date       | who            | Comment
  * --------|------------|----------------|-------------------------------------
- * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for
- *         |            |                | review and testing within dev-team
- * 0.2     | 24-4-2020  | Remko Welling  | Added heardes, Sanitize code, add 
- *         |            |                | Doxygen compatible comments
- *         |            |                |
- *         |            |                |
- *         |            |                |
+ * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for review and testing within dev-team
+ * 0.2     | 24-4-2020  | Remko Welling  | Added heardes, Sanitize code, add Doxygen compatible comments
  *
  * # References
  *
