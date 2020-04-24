@@ -1,12 +1,51 @@
-/** 
- * ESP32 I2S Noise FFT with LoRa
+/*--------------------------------------------------------------------
+  This file is part of the TTN-Apeldoorn Sound Sensor.
+
+  This code is free software:
+  you can redistribute it and/or modify it under the terms of a Creative
+  Commons Attribution-NonCommercial 4.0 International License
+  (http://creativecommons.org/licenses/by-nc/4.0/) by
+  TTN-Apeldoorn (https://www.thethingsnetwork.org/community/apeldoorn/) 
+
+  The program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  --------------------------------------------------------------------*/
+
+/*!
+ * \file lorasound.ino
+ * \brief ESP32 I2S Noise FFT with LoRa.
+ * This example calculates noise in octave bands, in a-,c- and z-weighting.
+ * \author Marcel Meek
+ * \date See revision table
+ * \version see revision table
  * 
- * This example calculates noise in octave bands, in a,c and z weighting
- * Using Arduino FFT  https://www.arduinolibraries.info/libraries/arduino-fft
- * Using LoRa LMIC https://github.com/matthijskooijman/arduino-lmic
- * example: https://bitbucket.org/edboel/edboel/src/master/noise/
+ * ## version
  * 
- * Marcel Meek april 2020
+ * version | date       | who            | Comment
+ * --------|------------|----------------|-------------------------------------
+ * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for
+ *         |            |                | review and testing within dev-team
+ * 0.2     | 24-4-2020  | Remko Welling  | Added heardes, Sanitize code, add 
+ *         |            |                | Doxygen compatible comments
+ *         |            |                |
+ *         |            |                |
+ *         |            |                |
+ *
+ * # References
+ *
+ * This code is inspired on code of third parties:
+ * - example: https://bitbucket.org/edboel/edboel/src/master/noise/
+ * 
+ * # Dependencies
+ * 
+ * The sketch relies on the following libraries: 
+ * - Arduino FFT  https://www.arduinolibraries.info/libraries/arduino-fft
+ * - LoRa LMIC https://github.com/matthijskooijman/arduino-lmic
+ * 
+ * 
+ * # ToDo
+ * \todo RW Add documentation on hardware connections
  */
 
 #include <Arduino.h>
@@ -24,10 +63,17 @@
 #define SAMPLE_FREQ  22627  // this makes a bin bandwith of 22627 / 1024 = 22,01 Hz
 
 // define IO pins Sparkfun for I2S for MEMS microphone
-#define BCKL 18
-#define LRCL 23
-#define NOT_USED -1
-#define DOUT 19
+#define BCKL      18
+#define LRCL      23
+#define NOT_USED  -1
+#define DOUT      19
+
+//NMP441
+//klopt aansluiting voor NMP441 is iets anders:
+// L/R moet aan GND
+// SD  aan 19
+// WS aan 23
+// SCK aan 18
 
 static LoRa lora;
 
@@ -41,7 +87,7 @@ const char* password = "yourpassword";
 const char* host = "192.168.1.17:5000";   
 #endif
 
-#define CYCLECOUNT   60000
+#define CYCLECOUNT   60000    ///< Transmit interval in ms
 
 // FFT buffers
 static float real[SAMPLES];
@@ -64,11 +110,11 @@ long milliCount = -1;
 
 // generate test sinus
 static void generateSineWave( int32_t* samples, float amplitude, float freq) {
-    float c = round( freq / (SAMPLE_FREQ/(float)SAMPLES)) / SAMPLES;       // put a multipe of complete sinewaves in buffer
-    for( int i=0; i< BLOCK_SIZE; i++) {
-       int32_t temp = 256 * amplitude * sin((float)i * c * twoPi );        // sine wave
-       samples[i] = temp & 0xFFFFFF00;  // convert to WAV integers
-    }
+  float c = round( freq / (SAMPLE_FREQ/(float)SAMPLES)) / SAMPLES;       // put a multipe of complete sinewaves in buffer
+  for(int i=0; i< BLOCK_SIZE; i++){
+   int32_t temp = 256 * amplitude * sin((float)i * c * twoPi );        // sine wave
+   samples[i] = temp & 0xFFFFFF00;  // convert to WAV integers
+  }
 } 
 
 static int32_t offset = 0;
@@ -78,100 +124,99 @@ static int32_t offset = 0;
 // convert 24 High bits from I2S buffer to float and divide * 256 
 // remove DC offset, necessary for some MEMS microphones 
 static void integerToFloat(int32_t * samples, float *vReal, float *vImag, uint16_t size) {
-    float sum = 0.0;
-    for (uint16_t i = 0; i < size; i++) {
-        int32_t val = (samples[i] >> 8);           // move 24 value bits on the correct place in a long
-        sum += (float)val;
-        samples[i] = (val - offset ) << 8;          // DC component removed, and move back to original buffer
-        vReal[i] = (float)val / (256.0 * FACTOR);   // adjustment
-        vImag[i] = 0.0;
-    }
-    offset = sum / size;   //dc component
-    //printf("DC offset %d\n", offset);
+  float sum = 0.0;
+  for (uint16_t i = 0; i < size; i++) {
+    int32_t val = (samples[i] >> 8);           // move 24 value bits on the correct place in a long
+    sum += (float)val;
+    samples[i] = (val - offset ) << 8;          // DC component removed, and move back to original buffer
+    vReal[i] = (float)val / (256.0 * FACTOR);   // adjustment
+    vImag[i] = 0.0;
+  }
+  offset = sum / size;   //dc component
+  //printf("DC offset %d\n", offset);
 }
 
 // calculates energy from Re and Im parts and places it back in the Re part (Im part is zeroed)
 static void calculateEnergy(float *vReal, float *vImag, uint16_t samples)
 {
-    for (uint16_t i = 0; i < samples; i++) {
-        vReal[i] = sq(vReal[i]) + sq(vImag[i]);
-        vImag[i] = 0.0;
-    }
+  for (uint16_t i = 0; i < samples; i++) {
+    vReal[i] = sq(vReal[i]) + sq(vImag[i]);
+    vImag[i] = 0.0;
+  }
 }
 // sums up energy in whole octave bins
 static void sumEnergy(const float *samples, float *energies)
 {
-    // skip the first bin
-    int bin_size = 1;
-    int bin = bin_size;
-    for (int octave = 0; octave < OCTAVES; octave++) {
-        float sum = 0.0;
-        for (int i = 0; i < bin_size; i++) {
-            sum += samples[bin++];
-        }
-        energies[octave] = sum;
-        bin_size *= 2;
-        //printf("octaaf=%d, bin=%d, sum=%f\n", octave, bin-1, sum);
+  // skip the first bin
+  int bin_size = 1;
+  int bin = bin_size;
+  for (int octave = 0; octave < OCTAVES; octave++) {
+    float sum = 0.0;
+    for (int i = 0; i < bin_size; i++) {
+      sum += samples[bin++];
     }
+    energies[octave] = sum;
+    bin_size *= 2;
+    //printf("octaaf=%d, bin=%d, sum=%f\n", octave, bin-1, sum);
+  }
 }
 
 void setup(void)
 {
-    Serial.begin(115200);
-    printf("Configuring I2S...\n");
-    pinMode(LED_BUILTIN, OUTPUT);       // lit if sending to LoRA
-    digitalWrite( LED_BUILTIN, LOW);
-    
-    esp_err_t err;
+  Serial.begin(115200);
+  printf("Configuring I2S...\n");
+  pinMode(LED_BUILTIN, OUTPUT);       // lit if sending to LoRA
+  digitalWrite( LED_BUILTIN, LOW);
+  
+  esp_err_t err;
 
-    // The I2S config as per the example
-    const i2s_config_t i2s_config = {
-        .mode = i2s_mode_t(I2S_MODE_MASTER | I2S_MODE_RX),      // Receive, not transfer
-        .sample_rate = SAMPLE_FREQ,
-        .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,   // only 24 bits are used
-        .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,    // although the SEL config should be left, it seems to transmit on right, or not
-        .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
-        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,       // Interrupt level 1
-        .dma_buf_count = 8,     // number of buffers
-        .dma_buf_len = 1024,    //BLOCK_SIZE,           // samples per buffer
-        .use_apll = true
-    };
+  // The I2S config as per the example
+  const i2s_config_t i2s_config = {
+    .mode = i2s_mode_t(I2S_MODE_MASTER | I2S_MODE_RX),      // Receive, not transfer
+    .sample_rate = SAMPLE_FREQ,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_32BIT,   // only 24 bits are used
+    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,    // although the SEL config should be left, it seems to transmit on right, or not
+    .communication_format = i2s_comm_format_t(I2S_COMM_FORMAT_I2S | I2S_COMM_FORMAT_I2S_MSB),
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,       // Interrupt level 1
+    .dma_buf_count = 8,                             // number of buffers
+    .dma_buf_len = 1024,                            //BLOCK_SIZE,           // samples per buffer
+    .use_apll = true
+  };
 
-    // The pin config
-    const i2s_pin_config_t pin_config = {
-        .bck_io_num = BCKL, 
-        .ws_io_num = LRCL,    
-        .data_out_num = NOT_USED,
-        .data_in_num = DOUT          
-    };
+  // The pin config
+  const i2s_pin_config_t pin_config = {
+    .bck_io_num = BCKL, 
+    .ws_io_num = LRCL,    
+    .data_out_num = NOT_USED,
+    .data_in_num = DOUT          
+  };
 
-    // Configuring the I2S driver and pins.
-    // This function must be called before any I2S driver read/write operations.
-    err = i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
-    if (err != ESP_OK) {
-        printf("Failed installing driver: %d\n", err);
-        while (true);
-    }
-    err = i2s_set_pin(I2S_PORT, &pin_config);
-    if (err != ESP_OK) {
-        printf("Failed setting pin: %d\n", err);
-        while (true);
-    }
-    printf("I2S driver installed.\n");
+  // Configuring the I2S driver and pins.
+  // This function must be called before any I2S driver read/write operations.
+  err = i2s_driver_install(I2S_PORT, &i2s_config, 0, NULL);
+  if (err != ESP_OK) {
+    printf("Failed installing driver: %d\n", err);
+    while (true);
+  }
+  err = i2s_set_pin(I2S_PORT, &pin_config);
+  if (err != ESP_OK) {
+    printf("Failed setting pin: %d\n", err);
+    while (true);
+  }
+  printf("I2S driver installed.\n");
 
-// send LoRA Join message
-    lora.sendMsg(0, NULL, 0);
+  // send LoRA Join message
+  lora.sendMsg(0, NULL, 0);
 
- #ifdef WIFITEST
-    // begin WIFI
-    WiFi.begin(ssid, password); 
- 
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
-        printf("Connecting to WiFi..\n");
-    }
-    printf("Connected to the WiFi network\n");
- #endif
+#ifdef WIFITEST
+  // begin WIFI
+  WiFi.begin(ssid, password); 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    printf("Connecting to WiFi..\n");
+  }
+  printf("Connected to the WiFi network\n");
+#endif
 }
 
  #ifdef WIFITEST
