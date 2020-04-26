@@ -25,7 +25,7 @@
  * version | date       | who            | Comment
  * --------|------------|----------------|-------------------------------------
  * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for review and testing within dev-team
- * 0.2     | 24-4-2020  | Remko Welling  | Added heardes, Sanitize code, add Doxygen compatible comments
+ * 0.2     | 24-4-2020  | Remko Welling  | Added headers, Sanitize code, add Doxygen compatible comments
  *
  * # References
  *
