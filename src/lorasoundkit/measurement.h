@@ -29,8 +29,8 @@
  * 0.2     | 24-4-2020  | Remko Welling  | Added headers, Sanitize code, add 
  *         |            |                | Doxygen compatible comments, add 
  *         |            |                | include guards
- *         |            |                |
- *         |            |                |
+ * 0.3     | 22-6-2020  | Marcel Meek    | Calculate AVG based on energy
+ *         |            |                | PEAK is changed in MAX, MIN is added
  *
  * # References
  *
@@ -49,11 +49,11 @@
 
 #define OCTAVES 9
 
-// A-weighting and C-weighting curve from 31.5 Hz ... 8kHz in steps of whole octaves
-// spectrum (Hz)     31.5Hz|  63Hz| 125Hz| 250Hz| 500Hz|1kHz|2kHz|4kHz| 8kHz
-#define A_WEIGHTING { -39.4, -26.2, -16.1,  -8.6,  -3.2, 0.0, 1.2, 1.0, -1.1 };
-#define C_WEIGHTING {  -3.0,  -0.8,  -0.2,   0.0,   0.0, 0.0, 0.2, 0.3, -3.0 };
-#define Z_WEIGHTING {   0.0,  -0.0,  -0.0,   0.0,   0.0, 0.0, 0.0, 0.0,  0.0 };
+// A, C and Z weighting curves from in steps of whole octaves
+// spectrum           31,5Hz  63Hz  125Hz 250Hz  500Hz 1kHz 2kHz 4kHz 8kHz 
+#define A_WEIGHTING { -39.4, -26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1 };
+#define C_WEIGHTING {  -3.0,  -0.8,  -0.2,  0.0,  0.0, 0.0, 0.2, 0.3, -3.0 };
+#define Z_WEIGHTING {   0.0,  -0.0,  -0.0,  0.0,  0.0, 0.0, 0.0, 0.0,  0.0 };
 
 
 class Measurement {
@@ -86,12 +86,12 @@ class Measurement {
    /// \todo rename member variables with prefix '_' to indicate member variables.
    
     float spectrum[OCTAVES];  ///< Array of results in dB per frequency band.
-    float peak;               ///< Peak value in dB for all bands.
-    float avg;                ///< Average value in dB for all bands.
-
+    float min, max;           ///< min and max value in dB.
+    float avg;                ///< All average in dB based on energy.
+ 
   private:
-    float* _weighting;        ///< Weighting factor ?
-    int    _count;            ///< Internal counter ?
+    float* _weighting;        ///< Weighting factors
+    int    _n;                ///< number of measurements
 }; 
 
 #endif //__MEASUREMENT_H_
