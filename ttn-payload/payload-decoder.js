@@ -26,7 +26,7 @@
  * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for review and testing within dev-team
  * 0.2     | 26-4-2020  | Remko Welling  | Sanitize code, add comments, added switch-case for application port number to allow expantion to future packet types.
  * 0.3     | 26-4-2020  | Remko Welling  | Added decoding for WiFi localisation.
- *
+ * 0.4     | 22-6-2020  | Marcel Meek    | Soundkit V2 format added, Lora Port 20, LA and LC is calculated from LZ
  */
 function Decoder(bytes, port) {
    // Functions and variables for sonde payload decoding
@@ -82,7 +82,7 @@ function Decoder(bytes, port) {
 
    switch(port) {
       case 10:
-         // decode payload in spectrum peak and average for level a, c and z
+         // decode payload in spectrum peak and average for level a, c and z     (OLD FORMAT dont use it)
          {
            decoded.la = {};
            decoded.la.spectrum = getList12(9);   // list length = 9
@@ -102,6 +102,39 @@ function Decoder(bytes, port) {
            return decoded;
          }
          break;
+       
+      // decode payload; min, max, and avg for la, lc and lz 
+      // get lz spectrum and calculate la spectrum and lc spectrum from lz
+      case 20: {
+        var len = aWeighting.length;
+
+        decoded.la = {};
+        decoded.la.min = getVal12();
+        decoded.la.max = getVal12();
+        decoded.la.avg = getVal12();
+ 
+        decoded.lc = {};
+        decoded.lc.min = getVal12();
+        decoded.lc.max = getVal12();
+        decoded.lc.avg = getVal12();
+    
+        decoded.lz = {};    
+        decoded.lz.min = getVal12();
+        decoded.lz.max = getVal12();
+        decoded.lz.avg = getVal12();
+    
+        decoded.lz.spectrum = getList12(len);
+    
+        // convert LZ spectrum to LA spectrum
+        decoded.la.spectrum = [];
+        for( i=0; i<len; i++) 
+          decoded.la.spectrum[i] = decoded.lz.spectrum[i] + aWeighting[i];
+ 
+        // convert LZ spectrum to LC spectrum
+        decoded.lc.spectrum = [];
+        for( i=0; i<len; i++) 
+          decoded.lc.spectrum[i] = decoded.lz.spectrum[i] + cWeighting[i];
+      }
       
       case 1:
          {
