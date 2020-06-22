@@ -36,7 +36,10 @@ function Decoder(bytes, port) {
    
    var i = 0;  // nibbleCount (nibble is 4 bits)
    var decoded = {};
-  
+   // weigthing tables
+   var aWeighting = [ -39.4, -26.2, -16.1, -8.6, -3.2, 0.0, 1.2, 1.0, -1.1 ];
+   var cWeighting = [  -3.0,  -0.8,  -0.2,  0.0,  0.0, 0.0, 0.2, 0.3, -3.0 ];
+   
    // get 12 bits value from payload and convert it to float and divide by 10.0
    function getVal12(){
       var val = 0;
