@@ -5,7 +5,7 @@
   you can redistribute it and/or modify it under the terms of a Creative
   Commons Attribution-NonCommercial 4.0 International License
   (http://creativecommons.org/licenses/by-nc/4.0/) by
-  TTN-Apeldoorn (https://www.thethingsnetwork.org/community/apeldoorn/) 
+  TTN-Apeldoorn (https://www.thethingsnetwork.org/community/apeldoorn/)
 
   The program is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -13,74 +13,68 @@
   --------------------------------------------------------------------*/
 
 /*!
- * \file measurement.cpp
- * \author Marcel Meek
- * \date See revision table in header file
- * \version see revision table in header file
- * 
- * # ToDo
- * \todo RW Add documentation on hardware connections
- */
- 
+   \file measurement.cpp
+   \author Marcel Meek
+   \date See revision table in header file
+   \version see revision table in header file
+
+   # ToDo
+   \todo RW Add documentation on hardware connections
+*/
+#include <float.h>
 #include <Arduino.h>
 #include "measurement.h"
 
-//Measurement::Measurement( float* weighting) {
-//  _weighting = weighting;
-//  for(int i=0; i<OCTAVES; i++){
-//    _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to level constants
-//  }
-//  reset();
-//}
-
-Measurement::Measurement( float* weighting):
-  _weighting(weighting)
-{
-  for(int i=0; i<OCTAVES; i++){
-    _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to level constants
-  }
+Measurement::Measurement( float* weighting) {
+  _weighting = weighting;
+  for ( int i = 0; i < OCTAVES; i++)
+    _weighting[i] = pow(10, _weighting[i] / 10.0);  // convert dB constants to energy level constants
   reset();
 }
 
+void Measurement::reset() {
+  avg = min = max = 0.0;
+  _n = 0;
+  min = FLT_MAX;
+  max = FLT_MIN;
 
-void Measurement::reset(){
-  peak = avg = 0.0;
-  _count = 0;
-  for( int i=0; i< OCTAVES; i++){
-   spectrum[i] = 0.0; 
-  }
+  for ( int i = 0; i < OCTAVES; i++)
+    spectrum[i] = 0.0;
 }
 
 void Measurement::update( float* energies ) {
-  float sum = 0.0;
-  for (int i = 0; i < OCTAVES; i++){
+  _n++;
+  float sum = 0.0;                             // sum in energy for this measurement
+  for (int i = 0; i < OCTAVES; i++) {
     float v = energies[i] * _weighting[i];
+    spectrum[i] += v;                          // sum energy per band for all measurements
     sum += v;
-    spectrum[i] += decibel(v);
   }
-  sum = decibel(sum);
   avg += sum;
-  if( peak < sum){
-    peak = sum;
-  }
-  _count++;
+
+  if ( max < sum) max = sum;
+  if ( min > sum) min = sum;
 }
 
-void Measurement::calculate(){
-  avg /= _count;
-  for( int i=0; i< OCTAVES; i++){
-    spectrum[i] /= _count;
+void Measurement::calculate() {
+  avg = decibel( avg / (float)_n);            // calculate average and convert to dB
+  min = decibel( min);                       // convert to dB
+  max = decibel( max);                       // convert to dB
+
+  // calculate average for each band and convert to dB
+  for ( int i = 0; i < OCTAVES; i++) {
+    float val = spectrum[i] / (float)_n;      // energy average
+    spectrum[i] = decibel( val);              // convert to dB
   }
 }
 
 float Measurement::decibel(float v) {
-  return 10.0 * log10(v); // log(10);     // for energy this should be 20.0 * log...  to be checked! 
+  return 10.0 * log10(v);                    // for energy this should be 20.0 * log...  to be checked!
 }
 
 void Measurement::print() {
-  printf("count=%d peak=%.1f avg=%.1f =>", _count, peak, avg);
-  for (int i = 0; i < OCTAVES; i++){
+  printf("count=%d min=%.1f max=%.1f avg=%.1f  =>", _n, min, max, avg);
+  for (int i = 0; i < OCTAVES; i++)
     printf(" %.1f", spectrum[i]);
-  }
   printf("\n");
-} 
+}
