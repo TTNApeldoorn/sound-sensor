@@ -17,74 +17,104 @@
  * \author Marcel Meek
  * \date See revision table in header file
  * \version see revision table in header file
- * 
- * # ToDo
- * \todo MM time-out, and handle download messages
  */
 
 #include <Arduino.h>
 #include <lmic.h>
 #include <hal/hal.h>
-//#include <SPI.h>
-#include "lora.h"
 
-// pin mappings
+#include "lora.h"
+#include "config.h"
+
+// RFM95 pin mappings
+#if defined(_SPARKFUN)
 const lmic_pinmap lmic_pins {
-    .nss = NSS,
-    .rxtx = RXTX,
-    .rst = RST, 
-    .dio = {DIO1, DIO2, DIO3},
+  .nss = 16,
+  .rxtx = LMIC_UNUSED_PIN,
+  .rst = 5,
+  .dio = {26, 33, 32},
 };
+#endif
+
+#if defined(_TTGO)
+const lmic_pinmap lmic_pins {
+  .nss = 18,
+  .rxtx = LMIC_UNUSED_PIN,
+  .rst = 14,
+  .dio = {26, 33, 32},
+};
+#endif
+
+const int      TxTIMEOUT = 10000;                   /// wait max TxTIMEOUT msec. after a join or send
+const uint8_t  DOWNLINK_DATA_SIZE = 52;             ///< Maximum payload size (not enforced)
+
+static bool    txBusy {false};
+
+static uint8_t downlinkPort {0};                   ///< used uplink port
+static uint8_t downlinkData[DOWNLINK_DATA_SIZE] {};  ///< uplink data
+static uint8_t downlinkDataSize {0};
+
+static void (*_callback)(unsigned int, uint8_t*, unsigned int) = NULL;     // TTN receive handler
+
+LoRa::LoRa() {
+  
+#ifdef VCC_ENABLE
+  // For Pinoccio Scout boards
+  pinMode(VCC_ENABLE, OUTPUT);
+  digitalWrite(VCC_ENABLE, HIGH);
+  delay(1000);
+#endif
+  
+  // LMIC init
+  os_init();
+  
+  // Reset the MAC state. Session and pending data transfers will be discarded.
+  LMIC_reset();
+}
+
+LoRa::~LoRa() {
+  // Reset the MAC state. Session and pending data transfers will be discarded.
+  LMIC_reset();
+}
+
+void LoRa::sendMsg(int port, uint8_t* buf, int len){
+  os_runloop_once();
+
+  // Check if there is not a current TX/RX job running
+  if (LMIC.opmode & OP_TXRXPEND) {
+    printf("OP_TXRXPEND, not sending\n");
+  }
+  else {
+    // Prepare upstream data transmission at the next possible time.
+    txBusy = true;
+    printf("queue ttn message len=%d\n", len);
+    LMIC_setTxData2( port, buf, len, 0);
+    uint32_t start = millis();
+    while ( txBusy && (millis() - start < TxTIMEOUT) ) {         //MM,  wait max TxTIMEOUT ms
+      os_runloop_once();
+    }
+    if ( txBusy) {
+      LMIC_reset();
+      txBusy = false;
+      printf( "ttn send failed\n");
+    }
+  }
+}
+
+void LoRa::process() {
+  os_runloop_once();
+}
+
+void LoRa::receiveHandler( void (*callback)(unsigned int, uint8_t*, unsigned int)) {
+  _callback = callback;
+}
+
 
 // handle TTN keys
 void convertStringToByteArray(unsigned char* byteBuffer, const char* str);
 void os_getArtEui (u1_t* buf) { convertStringToByteArray( buf, APPEUI);}
 void os_getDevEui (u1_t* buf) { convertStringToByteArray( buf, DEVEUI);}
 void os_getDevKey (u1_t* buf) { convertStringToByteArray( buf, APPKEY);}
-
-static bool txBusy= false;
-
-LoRa::LoRa() {
-#ifdef VCC_ENABLE
-    // For Pinoccio Scout boards
-    pinMode(VCC_ENABLE, OUTPUT);
-    digitalWrite(VCC_ENABLE, HIGH);
-    delay(1000);
-#endif
-    // LMIC init
-    os_init();
-    // Reset the MAC state. Session and pending data transfers will be discarded.
-    LMIC_reset();
-}
-
-LoRa::~LoRa() {
-    // Reset the MAC state. Session and pending data transfers will be discarded.
-    LMIC_reset();
-}
-
-void LoRa::sendMsg(int port, uint8_t* buf, int len){
-    os_runloop_once();
-    digitalWrite(LED_BUILTIN, HIGH);
-    
-    // Check if there is not a current TX/RX job running
-    if (LMIC.opmode & OP_TXRXPEND){
-    printf("OP_TXRXPEND, not sending\n");
-    } 
-    else {
-        // Prepare upstream data transmission at the next possible time.
-        txBusy= true;
-        printf("queue ttn message\n");
-        LMIC_setTxData2( port, buf, len, 0);
-        while( txBusy) {                             // TO BE DONE handle time out
-            os_runloop_once();
-        }
-    }
-    digitalWrite( LED_BUILTIN, LOW);
-}
-
-void LoRa::loop() {
-    os_runloop_once();
-}
 
 void onEvent (ev_t ev) {
   printf("%d: ", os_getTime());
@@ -105,6 +135,7 @@ void onEvent (ev_t ev) {
       printf("EV_JOINING\n");
       break;
     case EV_JOINED:
+      txBusy = false;           // MM added, a succesful join must also reset this flag
       printf("EV_JOINED\n");
       // Disable link check validation (automatically enabled
       // during join, but not supported by TTN at this time).
@@ -125,8 +156,18 @@ void onEvent (ev_t ev) {
       if (LMIC.txrxFlags & TXRX_ACK){
         printf("Received ack\n");
       }
-      if (LMIC.dataLen){
+      if (LMIC.dataLen != 0){
         printf("Received %d bytes of payload\n", LMIC.dataLen);
+        downlinkDataSize = LMIC.dataLen;
+        downlinkPort = LMIC.frame[LMIC.dataBeg-1];
+        for( int i = 0; i < downlinkDataSize; i++){
+          downlinkData[i] = LMIC.frame[LMIC.dataBeg+i];
+        }
+        downlinkData[downlinkDataSize] = '\0';    // MM append string terminator
+        // MM callback added
+        if( _callback != NULL) {
+          _callback( downlinkPort, downlinkData, downlinkDataSize);
+        }
       }
       break;
     case EV_LOST_TSYNC:
@@ -161,9 +202,11 @@ void convertStringToByteArray(unsigned char* byteBuffer, const char* str){
     substr[2] = '\0';
     if( len == 16){
       byteBuffer[((len-1)-i)/2] = (unsigned char)(strtol(substr, NULL, 16));   // reverse the TTN KEY string !!
-    }else if( len == 32){
+    }
+    else if( len == 32) {
       byteBuffer[i/2] = (unsigned char)(strtol(substr, NULL, 16));             // don't reverse the TTN KEY
-    }else{
+    }
+    else {
       printf( "Incorrect TTN key length: %s\n", str);
       break;
     }  
