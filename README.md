@@ -24,7 +24,7 @@ This Soundkit sensor measures continuously audible sound by analyzing the data u
 ## Electronic components assembly
 The software is based on ESP32 processor wtih Lora RFM95 module. Two boards has been tested viz. Sparkfun LoRa board and TTGO LoRa board.
 #### Components
-* Sparkfun LoRa Gateway 1-channel ESP32 (used as Sensor), or LilyGO TTGO LoRa32 868MHz ESP32
+* Sparkfun LoRa Gateway 1-channel ESP32 (used as Sensor), or TTGO LoRa32 V1
 * I2S MEMS microphone SPH046 or I2S MEMS microphone NMP441
 * antenna ¼ lambda, e.g a wire of 8.4 cm length or 868MHz Helical Antenna
 * power adapter 5V, 0.5A
@@ -51,8 +51,8 @@ Add the line in Arduino→preferences→Additional Boardsmanagers URL:
 ```
 Restart Arduino environment.
 
-In the Arduino menu Tools→Boards, choose Sparkfun Lora gateway board.
-If not vissible check the presence of the Sparkfun variant file, see instructions at https://learn.sparkfun.com/tutorials/sparkfun-lora-gateway-1-channel-hookup-guide/programming-the-esp32-with-arduino  
+In the Arduino menu Tools→Boards, choose either Sparkfun Lora gateway board or TTGO LoRa32 V1.
+If Sparkfun Lora gateway is not vissible check the presence of the Sparkfun variant file, see instructions at https://learn.sparkfun.com/tutorials/sparkfun-lora-gateway-1-channel-hookup-guide/programming-the-esp32-with-arduino  
 
 ## Libraries
 
