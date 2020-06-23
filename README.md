@@ -66,12 +66,9 @@ I used the https://www.arduinolibraries.info/libraries/arduino-fft library.
 Copy the two files “arduinoFFT.h” and arduinoFFT.ccp” to your .ino main directory
 
 ## Config file
-In the config,h file the processor board is defined either Sparkfun or TTGO
-```
-//#define _SPARKFUN         // uncomment if SParkfun board
-#define _TTGO               // uncomment if TTGO board
-```
-The cycle count, how often a measurement is sent to the thingsnetwork in msec.:
+In the config.h define some parameters.
+#### Cycle count
+The cycle count defines how often a measurement is sent to the thingsnetwork in msec.:
 ```
 #define CYCLECOUNT   60000 
 ```
