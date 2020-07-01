@@ -24,51 +24,30 @@
  * 
  * version | date       | who            | Comment
  * --------|------------|----------------|-------------------------------------
- * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for
- *         |            |                | review and testing within dev-team
- * 0.2     | 24-4-2020  | Remko Welling  | Added headers, Sanitize code, add 
- *         |            |                | Doxygen compatible comments, add 
- *         |            |                | include guards
- *         |            |                |
- *         |            |                |
- *
+ * 0.1     | 22-4-2020  | Marcel Meek    | Initial release within community for review and testing within dev-team
+ * 0.2     | 24-4-2020  | Remko Welling  | Added headers, Sanitize code, add Doxygen compatible comments, add include guards
+ * 0.3     | 3-5-2020   | Remko Welling  | Added downlink handling.
+ * 0.4     | 5-5-2020   | Remko Welling  | downlink handling completed
+ * 0.5     | 31-5-2020  | Marcel Meek    | timout added when a join or send fails
+ * 0.6     | 1-6-2020   | Marcel Meek    | callback for downlink added, static buffers moved from .h file to .cpp file
+ * 
  * # References
  *
  * -
  *
  * # Dependencies
  * 
- * 
- * # ToDo
- * \todo RW Add documentation on hardware connections
- * \todo RW remove credentials to credentials file
  */
 
 #ifndef __LORA_H_
 #define __LORA_H_
 
-// define here your keys and LoRa RFM95 pinning
-
-// specify here TTN keys 
-/// \todo move to separate credentials file.
-#define APPEUI "70B3D57ED002DDB2"
-#define DEVEUI "0075BD2E52919D51"
-#define APPKEY "4D3509EB008CB207D2E15CE4AA251704"
-
-// define RFM 95 pins
-/// \todo move to separate configuration file
-#define NSS   16
-#define RXTX  LMIC_UNUSED_PIN
-#define RST   5
-#define DIO1  26
-#define DIO2  33
-#define DIO3  32
+#include <stdint.h> // uint8_t type
 
 class LoRa{
   public:
     
     LoRa();
-    
     ~LoRa();
     
     /// \brief send data to LoRaWAN
@@ -79,10 +58,13 @@ class LoRa{
     
     /// \brief function to be called to allow LMIC OS to operated.
     /// Shall be called periodically to let LMIC operate.
-    void loop();
+    void process();
 
-  private:
-    //void onEvent (ev_t ev);
+    /// \brief specify callback funftion, this function is called when downlink data has been receieved
+    /// \param port
+    /// \param buffer
+    /// \param length of buffer
+    void receiveHandler( void (*callback)(unsigned int, uint8_t*, unsigned int));
 };
 
 #endif // __LORA_H_
