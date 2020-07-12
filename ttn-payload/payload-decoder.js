@@ -27,6 +27,7 @@
  * 0.2     | 26-4-2020  | Remko Welling  | Sanitize code, add comments, added switch-case for application port number to allow expantion to future packet types.
  * 0.3     | 26-4-2020  | Remko Welling  | Added decoding for WiFi localisation.
  * 0.4     | 22-6-2020  | Marcel Meek    | Soundkit V2 format added, Lora Port 20, LA and LC is calculated from LZ
+ * 0.5     | 12-7-2020  |                | LoRa Port number for sound, 20 old format, 21 new V2 format
  */
 function Decoder(bytes, port) {
    // Functions and variables for sonde payload decoding
@@ -84,7 +85,7 @@ function Decoder(bytes, port) {
    }
 
    switch(port) {
-      case 10:
+      case 20:
          // decode payload in spectrum peak and average for level a, c and z     (OLD FORMAT dont use it)
          {
            decoded.la = {};
@@ -108,7 +109,7 @@ function Decoder(bytes, port) {
        
       // decode payload; min, max, and avg for la, lc and lz 
       // get lz spectrum and calculate la spectrum and lc spectrum from lz
-      case 20: {
+      case 21: {
         var len = aWeighting.length;
 
         decoded.la = {};
