@@ -138,8 +138,10 @@ function Decoder(bytes, port) {
         decoded.lc.spectrum = [];
         for( i=0; i<len; i++) 
           decoded.lc.spectrum[i] = decoded.lz.spectrum[i] + cWeighting[i];
+        return decoded;
       }
-      
+      break;
+
       case 1:
          {
             var mac1="";
