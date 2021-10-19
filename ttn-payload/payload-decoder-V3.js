@@ -42,7 +42,8 @@ function decodeUplink(input) {
     }
  
     switch(input.fPort) {
-       case 20:
+        // old soundkit payload format (message length is 51 bytes) 
+        case 20:
           {
             decoded.la = {};
             decoded.la.spectrum = getList12(9);
@@ -63,7 +64,8 @@ function decodeUplink(input) {
                data: decoded
             };
           }
-
+            
+        // also old soundkit payload format (message length is 27 bytes) 
        case 21:
         {
             var len = aWeighting.length;
@@ -96,7 +98,48 @@ function decodeUplink(input) {
                 data: decoded
                 };
         }
- 
+            
+        // new compressed payload format soundkit (message length is 18 bytes)
+        case 22:
+        {
+            var max = bytes[i++];
+            var c = max / 255.0;
+
+            decoded.la = {};
+            decoded.lc = {};
+            decoded.lz = {};    
+    
+            // get min, max and avg for LA, LC and LZ
+            decoded.la.min = c * input.bytes[i++];
+            decoded.la.max = c * input.bytes[i++];
+            decoded.la.avg = c * input.bytes[i++];    
+            decoded.lc.min = c * input.bytes[i++];
+            decoded.lc.max = c * input.bytes[i++];
+            decoded.lc.avg = c * input.bytes[i++];    
+            decoded.lz.min = c * input.bytes[i++];
+            decoded.lz.max = c * input.bytes[i++];
+            decoded.lz.avg = c * input.bytes[i++];
+  
+            // get LZ spectrum
+            decoded.lz.spectrum = [];
+            for( j=0; j<len; j++) 
+                decoded.lz.spectrum[j] = c * input.bytes[i++];
+   
+            // convert LZ spectrum to LA
+            decoded.la.spectrum = [];
+            for( j=0; j<len; j++) 
+                decoded.la.spectrum[j] = decoded.lz.spectrum[j] + aWeighting[j];
+
+            // convert LZ spectrum to LC
+            decoded.lc.spectrum = [];
+            for( j=0; j<len; j++) 
+                decoded.lc.spectrum[j] = decoded.lz.spectrum[j] + cWeighting[j];    
+                
+            return{ 
+                data: decoded
+                };    
+                
+        } 
        case 1:
         {
              var mac1="";
@@ -133,57 +176,55 @@ function decodeUplink(input) {
     }
 }
 // ------------------------------------------------------------------------
-// EXAMPLE DATA: 22336E2AF22038B2C422338B2C41B21BB20F2722A528F22F2121DC
-//               2232D92452222E92522252E92531AE1B71BA1E22281FE1FC1FD1D9
-
-// Output:
-// {
-//     "la": {
-//       "avg": 68.7,
-//       "max": 87.8,
-//       "min": 54.7,
-//       "spectrum": [
-//         4,
-//         18.099999999999998,
-//         36.6,
-//         54,
-//         64.5,
-//         65.5,
-//         57.1,
-//         54,
-//         46.5
-//       ]
-//     },
-//     "lc": {
-//       "avg": 70.8,
-//       "max": 90.7,
-//       "min": 54.4,
-//       "spectrum": [
-//         40.4,
-//         43.5,
-//         52.5,
-//         62.6,
-//         67.7,
-//         65.5,
-//         56.1,
-//         53.3,
-//         44.6
-//       ]
-//     },
-//     "lz": {
-//       "avg": 70.8,
-//       "max": 90.7,
-//       "min": 54.7,
-//       "spectrum": [
-//         43.4,
-//         44.3,
-//         52.7,
-//         62.6,
-//         67.7,
-//         65.5,
-//         55.9,
-//         53,
-//         47.6
-//       ]
-//     }
-//   }
+// EXAMPLE DATA SOUNKIT PORT 22 
+//    "frm_payload": "NJ3irbX607n/2sq+pJuViIeNfw==",
+//    "decoded_payload": {
+//      "la": {
+//        "avg": 35.27843137254902,
+//        "max": 46.08627450980392,
+//        "min": 32.015686274509804,
+//        "spectrum": [
+//          1.7921568627451023,
+//          12.545098039215684,
+//          17.34313725490196,
+//          23.007843137254902,
+//          27.184313725490195,
+//          27.733333333333334,
+//          28.72941176470588,
+//          29.75294117647059,
+//          24.798039215686273
+//        ]
+//      },
+//      "lc": {
+//        "avg": 43.02745098039215,
+//        "max": 50.98039215686274,
+//        "min": 36.909803921568624,
+//        "spectrum": [
+//          38.1921568627451,
+//          37.94509803921569,
+//          33.24313725490196,
+//          31.6078431372549,
+//          30.384313725490195,
+//          27.733333333333334,
+//          27.72941176470588,
+//          29.05294117647059,
+//          22.898039215686275
+//        ]
+//      },
+//      "lz": {
+//        "avg": 44.45490196078431,
+//        "max": 52,
+//        "min": 37.72549019607843,
+//        "spectrum": [
+//          41.1921568627451,
+//          38.745098039215684,
+//          33.44313725490196,
+//          31.6078431372549,
+//          30.384313725490195,
+//          27.733333333333334,
+//          27.52941176470588,
+//          28.75294117647059,
+//          25.898039215686275
+//        ]
+//      }
+//    }
