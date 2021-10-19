@@ -29,8 +29,7 @@
  * 0.2     | 24-4-2020  | Remko Welling  | Added headers, Sanitize code, add 
  *         |            |                | Doxygen compatible comments, add 
  *         |            |                | include guards
- * 0.3     | 22-6-2020  | Marcel Meek    | Calculate AVG based on energy
- *         |            |                | PEAK is changed in MAX, MIN is added
+ *         |            |                |
  *
  * # References
  *
