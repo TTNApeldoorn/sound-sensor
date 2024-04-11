@@ -13,7 +13,7 @@
 * [To Do](#To-Do)
 
 ## General
-This Soundkit is easy to build for a low cost price (ca. 40 euro) and is therefore very suitable to be used for citizen sensing.
+This Soundkit is easy to build for a low cost price and is therefore very suitable to be used for citizen sensing.
 
 This sensor measures continuously audible sound by analyzing the data using FFT process. The measured results are send in a report at regular time intervals to the LoRaWan network, where it can be picked up for visualization.
 
