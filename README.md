@@ -134,7 +134,7 @@ Note that unique DEVEUI is read from the TTGO ESP32 board id. The DEVEUI is disp
   * average, maximum and minimum level
 
 ## Test Report
-The [test report can be found HERE](test/Test-report-TTGO-LoRa-Soundkit.pdf)  
+The [test report can be found HERE](Test-report-TTGO-LoRa-Soundkit.pdf)  
 The test report desribes the tests of the Soundkit together with the Teensy4 soundsensor of the Sensor Community Germany.  
 Three test sets are used and the results are compared. The sets are:
 - Soundkit LoRa TTGO with ICS43434
